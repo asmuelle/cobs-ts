@@ -1,6 +1,6 @@
 {
   "name": "cobs-ts",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "TypeScript implementation of Constrained B-Splines",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,8 +15,9 @@
     "regression",
     "typescript"
   ],
-  "author": "",
-  "license": "MIT",
+  "author": "Andreas Mueller <andreas@kwiqly.com> (https://kwiqly.com)",
+  "homepage": "https://github.com/iasmuelle/cobs-ts",
+  "license": "GPL2 and later",
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
