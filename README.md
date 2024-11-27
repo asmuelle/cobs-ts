@@ -1,6 +1,6 @@
-# COBS-TS
+# COBS-TS Work in Progress
 
-A TypeScript implementation of Constrained B-Splines (COBS), based on the R package [cobs](https://cran.r-project.org/web/packages/cobs/).
+A TypeScript implementation (WIP) of Constrained B-Splines (COBS), based on the R package [cobs](https://cran.r-project.org/web/packages/cobs/).
 
 ## Description
 
