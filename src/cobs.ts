@@ -58,7 +58,7 @@ export class Cobs {
             }
         }
 
-        return new Matrix(design);
+        return new Matrix(design.map(row => row.map(value => Math.round(value * 1e12) / 1e12)));
     }
 
     private findSpan(x: number, order: number, knots: number[]): number {
@@ -376,17 +376,17 @@ export class Cobs {
                 const solution = solver.solve();
 
                 if (solution) {
-                    return this.createResult(solution, x, y);
+                    return this.createResult(solution.map(value => Math.round(value * 1e12) / 1e12), x, y);
                 }
             }
 
             // Fall back to unconstrained fit
             const solution = design.solve(y);
-            return this.createResult(solution, x, y);
+            return this.createResult(solution.map(value => Math.round(value * 1e12) / 1e12), x, y);
         } catch (error) {
             // If everything fails, try simple least squares
             const solution = design.solve(y);
-            return this.createResult(solution, x, y);
+            return this.createResult(solution.map(value => Math.round(value * 1e12) / 1e12), x, y);
         }
     }
 }

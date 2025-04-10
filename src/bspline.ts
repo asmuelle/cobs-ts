@@ -36,7 +36,7 @@ export class BSpline {
             result[span - this.degree + i] = basis[i];
         }
 
-        return result;
+        return result.map(value => Math.round(value * 1e12) / 1e12);
     }
 
     evaluateDerivative(x: number): number[] {
@@ -54,7 +54,7 @@ export class BSpline {
             result[span - this.degree + i] = basis[i];
         }
 
-        return result;
+        return result.map(value => Math.round(value * 1e12) / 1e12);
     }
 
     evaluateSecondDerivative(x: number): number[] {
@@ -72,7 +72,7 @@ export class BSpline {
             result[span - this.degree + i] = basis[i];
         }
 
-        return result;
+        return result.map(value => Math.round(value * 1e12) / 1e12);
     }
 
     private findSpan(x: number): number {
