@@ -154,5 +154,49 @@ describe('Cobs', () => {
             const value = result.fit.pp.evaluate(3);
             expect(Math.round(value * 1000000) / 1000000).toBe(Math.round(4 * 1000000) / 1000000);
         });
+
+        it('should handle numerical stability for small tolerances', () => {
+            const x = [1, 2, 3, 4, 5];
+            const y = [1, 1.000001, 1.000002, 1.000003, 1.000004];
+            const cobs = new Cobs();
+            const result = cobs.fit(x, y, {
+                degree: 3,
+                numKnots: 5
+            });
+
+            expect(result.fit).toBeDefined();
+            expect(result.fit.coefficients).toHaveLength(5);
+            expect(result.fit.fitted).toHaveLength(5);
+            expect(result.fit.residuals).toHaveLength(5);
+
+            // Check numerical stability
+            const evalPoints = [1.5, 2.5, 3.5, 4.5];
+            const values = evalPoints.map(x => result.fit.pp.evaluate(x));
+            for (let i = 1; i < values.length; i++) {
+                expect(Math.abs(values[i] - values[i - 1])).toBeLessThan(1e-6);
+            }
+        });
+
+        it('should handle edge cases with very small tolerances', () => {
+            const x = [1, 2, 3, 4, 5];
+            const y = [1, 1.0000001, 1.0000002, 1.0000003, 1.0000004];
+            const cobs = new Cobs();
+            const result = cobs.fit(x, y, {
+                degree: 3,
+                numKnots: 5
+            });
+
+            expect(result.fit).toBeDefined();
+            expect(result.fit.coefficients).toHaveLength(5);
+            expect(result.fit.fitted).toHaveLength(5);
+            expect(result.fit.residuals).toHaveLength(5);
+
+            // Check numerical stability
+            const evalPoints = [1.5, 2.5, 3.5, 4.5];
+            const values = evalPoints.map(x => result.fit.pp.evaluate(x));
+            for (let i = 1; i < values.length; i++) {
+                expect(Math.abs(values[i] - values[i - 1])).toBeLessThan(1e-7);
+            }
+        });
     });
 });

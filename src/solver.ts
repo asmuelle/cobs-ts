@@ -4,7 +4,7 @@ import { Matrix } from './matrix';
  * Implementation of the Revised Simplex Method for sparse matrices
  */
 export class LPSolver {
-    private readonly tol = 1e-10;
+    private readonly tol = 1e-12;
     private readonly maxIter = 1000;
 
     private A: Matrix;
