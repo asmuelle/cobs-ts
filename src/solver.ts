@@ -45,6 +45,7 @@ export class LPSolver {
             // Get basis inverse
             const Binv = this.getBasisInverse(basis);
             if (!Binv) {
+                console.log("LPSolver DEBUG: getBasisInverse returned null. Basis was:", basis);
                 // If we can't get a basis inverse, return zero solution
                 return Array(this.n).fill(0);
             }
@@ -53,8 +54,8 @@ export class LPSolver {
             const xB = this.multiplyMatrixVector(Binv, this.b);
             const feasible = xB.every(x => x >= -this.tol);
             if (!feasible) {
-                // If solution is not feasible, return zero solution
-                return Array(this.n).fill(0);
+                // If solution is not feasible, throw an error
+                throw new Error("LPSolver: Initial basis or derived solution is not feasible.");
             }
 
             // Compute reduced costs
