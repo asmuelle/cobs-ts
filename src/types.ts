@@ -22,7 +22,7 @@ export interface PointwiseConstraint {
 }
 
 export interface Constraint {
-    type: 'monotone' | 'convex' | 'periodic' | 'pointwise';
+    type: 'monotone' | 'convex' | 'concave' | 'periodic' | 'pointwise';
     increasing?: boolean;
     convex?: boolean;
     x?: number;
@@ -41,6 +41,7 @@ export interface CobsOptions {
     knots?: number[];
     constraints?: Constraint[];
     tolerance?: number;
+    tau?: number;
 }
 
 export interface PiecewisePolynomial {
@@ -82,4 +83,7 @@ export interface CobsResult {
         evaluateSecondDerivative: (x: number) => number;
     };
     evaluate: (x: number) => number;
+    tau?: number;
+    lambda?: number;
+    sic?: number;
 }
