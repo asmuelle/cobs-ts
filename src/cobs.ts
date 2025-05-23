@@ -363,39 +363,106 @@ export class Cobs {
 
     private generatePointwiseConstraints(design: Matrix, x_val: number, y_val: number, operator: string): { A: Matrix; b: number[] } {
         const numBasis = design.numCols;
-        let A_data: number[] = []; 
+        // Ensure this.order and this.knots are correctly set and accessible
+        // If createDesignMatrix is computationally expensive, consider optimizing if called frequently
+        const basisAtXRow = this.createDesignMatrix([x_val], this.order, this.knots); 
+        const basisCoeffsAtX: number[] = [];
+        for (let j = 0; j < numBasis; j++) {
+            // Ensure get method handles potential out-of-bounds if basisAtXRow is not as expected
+            basisCoeffsAtX.push(basisAtXRow.get(0, j));
+        }
+
+        let A_data: number[] = [];
         const A_rowIndices: number[] = [];
         const A_colIndices: number[] = [];
-        let b_val = 0;
+        let b_vector: number[] = [];
+        let numConstraintRows = 0;
 
-        const basisAtX = this.createDesignMatrix([x_val], this.order, this.knots); 
+        if (operator === '=') {
+            numConstraintRows = 0; // Will be incremented if data is added
+            let actualRowsAdded = 0;
 
-        for (let j = 0; j < numBasis; j++) {
-            const basis_j_at_x = basisAtX.get(0, j);
-            if (Math.abs(basis_j_at_x) > this.tol) {
-                A_data.push(basis_j_at_x);
-                A_rowIndices.push(0); 
-                A_colIndices.push(j);
+            // Constraint 1: basisCoeffsAtX * coeffs <= y_val
+            let row1HasData = false;
+            for (let j = 0; j < numBasis; j++) {
+                if (Math.abs(basisCoeffsAtX[j]) > this.tol) {
+                    A_data.push(basisCoeffsAtX[j]);
+                    A_rowIndices.push(actualRowsAdded); // Use actualRowsAdded for row index
+                    A_colIndices.push(j);
+                    row1HasData = true;
+                }
             }
+            if (row1HasData) {
+                b_vector.push(y_val);
+                actualRowsAdded++;
+            }
+
+            // Constraint 2: basisCoeffsAtX * coeffs >= y_val  => -basisCoeffsAtX * coeffs <= -y_val
+            let row2HasData = false;
+            for (let j = 0; j < numBasis; j++) {
+                if (Math.abs(basisCoeffsAtX[j]) > this.tol) { // Check magnitude of original coefficient
+                    A_data.push(-basisCoeffsAtX[j]);
+                    A_rowIndices.push(actualRowsAdded); // Use actualRowsAdded for row index
+                    A_colIndices.push(j);
+                    row2HasData = true;
+                }
+            }
+            if (row2HasData) {
+                b_vector.push(-y_val);
+                actualRowsAdded++;
+            }
+            numConstraintRows = actualRowsAdded;
+
+        } else if (operator === '>=') {
+            // basisCoeffsAtX * coeffs >= y_val => -basisCoeffsAtX * coeffs <= -y_val
+            let rowHasData = false;
+            for (let j = 0; j < numBasis; j++) {
+                if (Math.abs(basisCoeffsAtX[j]) > this.tol) {
+                    A_data.push(-basisCoeffsAtX[j]);
+                    A_rowIndices.push(0);
+                    A_colIndices.push(j);
+                    rowHasData = true;
+                }
+            }
+            if (rowHasData) {
+                b_vector.push(-y_val);
+                numConstraintRows = 1;
+            } else {
+                numConstraintRows = 0;
+            }
+
+        } else if (operator === '<=') {
+            // basisCoeffsAtX * coeffs <= y_val
+            let rowHasData = false;
+            for (let j = 0; j < numBasis; j++) {
+                if (Math.abs(basisCoeffsAtX[j]) > this.tol) {
+                    A_data.push(basisCoeffsAtX[j]);
+                    A_rowIndices.push(0);
+                    A_colIndices.push(j);
+                    rowHasData = true;
+                }
+            }
+            if (rowHasData) {
+                b_vector.push(y_val);
+                numConstraintRows = 1;
+            } else {
+                numConstraintRows = 0;
+            }
+        } else {
+            throw new Error(`Unsupported operator: ${operator}`);
         }
         
-        switch (operator) {
-            case '=':
-                b_val = y_val; 
-                break;
-            case '>=': 
-                A_data = A_data.map(val => -val); 
-                b_val = -y_val;
-                break;
-            case '<=': 
-                b_val = y_val;
-                break;
-            default:
-                throw new Error(`Unsupported operator: ${operator}`);
+        // Only create a matrix if there are actual constraints
+        if (numConstraintRows > 0) {
+            const A = new Matrix({ rows: numConstraintRows, cols: numBasis, data: A_data, rowIndices: A_rowIndices, colIndices: A_colIndices });
+            return { A, b: b_vector };
+        } else {
+            // Return an empty matrix and vector if no constraint data was generated
+            return { 
+                A: new Matrix({ rows: 0, cols: numBasis, data: [], rowIndices: [], colIndices: [] }), 
+                b: [] 
+            };
         }
-        
-        const A = new Matrix({ rows: (A_data.length > 0 ? 1:0), cols: numBasis, data: A_data, rowIndices: A_rowIndices, colIndices: A_colIndices });
-        return { A, b: (A_data.length > 0 ? [b_val] : []) };
     }
 
     fit(x: number[], y: number[], options: CobsOptions = {}): CobsResult {
