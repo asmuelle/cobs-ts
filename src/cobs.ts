@@ -115,7 +115,7 @@ export class Cobs {
         return basis;
     }
 
-    private createResult(coefficients: number[], x: number[], y: number[]): CobsResult {
+    private createResult(coefficients: number[], x: number[], y: number[], tau?: number): CobsResult {
         const design = this.createDesignMatrix(x, this.order, this.knots);
         const error = this.calculateError(design, y, coefficients);
 
@@ -165,7 +165,8 @@ export class Cobs {
             pp, 
             evaluate, 
             knots: this.knots,
-            order: this.order
+            order: this.order,
+            tau: tau 
         };
     }
 
@@ -209,6 +210,9 @@ export class Cobs {
                     } else { 
                          result = this.generateConvexityConstraints(design, true); 
                     }
+                    break;
+                case 'concave':
+                    result = this.generateConvexityConstraints(design, false); // false for concave
                     break;
                 case 'periodic':
                     result = this.generatePeriodicityConstraints(design);
@@ -413,6 +417,7 @@ export class Cobs {
         } else {
             this.order = 4; // Default order if not specified
         }
+        const tauValue = options.tau;
        
         if (options.knots) {
             if (options.knots.length < 2 * this.order) { 
@@ -443,10 +448,13 @@ export class Cobs {
                 const { A, b } = this.solveConstrainedProblem(design, y, constraints);
                 
                 if (A.numRows > 0) { // Only attempt LP if matrix A actually has constraint rows
-                    const solver = new LPSolver(A, b, []);
+                    // Create a 'c' vector for the objective function: minimize sum of coefficients
+                    const objectiveCoeffs = Array(design.numCols).fill(1.0); 
+                    const solver = new LPSolver(A, b, objectiveCoeffs); // Pass actual objective coefficients
                     solverSolution = solver.solve(); // Can be null if LP is infeasible
                 } else {
                     // If constraints resulted in an empty A matrix, solution remains null, proceed to unconstrained.
+                    solverSolution = null;
                 }
             } catch (error: any) {
                 if (error && error.message && 
@@ -455,26 +463,30 @@ export class Cobs {
                 }
                 // For other unexpected errors, solution remains null, fall back to unconstrained.
                 // Optional: console.warn('An unexpected error occurred during constrained fitting attempt:', error);
+                solverSolution = null;
             }
         }
 
+        let final_coeffs: number[];
         if (solverSolution) {
              // Ensure solution has correct number of coefficients before creating result
             if (solverSolution.length !== design.numCols) {
                 // This case should ideally not happen if LPSolver is consistent with design.numCols
                 console.warn("LPSolver solution length differs from design matrix columns. Using unconstrained fit.");
                 const unconstrainedFallbackSolution = design.solve(y);
-                return this.createResult(unconstrainedFallbackSolution.map(value => Math.round(value * 1e12) / 1e12), x, y);
+                final_coeffs = unconstrainedFallbackSolution.map(value => Math.round(value * 1e12) / 1e12);
+            } else {
+                final_coeffs = solverSolution.map(value => Math.round(value * 1e12) / 1e12);
             }
-            return this.createResult(solverSolution.map(value => Math.round(value * 1e12) / 1e12), x, y);
         } else {
             // Unconstrained fit:
             // 1. No constraints provided.
             // 2. Constraints resulted in empty A.
-            // 3. LPSolver.solve() returned null (infeasible).
+            // 3. LPSolver.solve() returned null (infeasible or not attempted).
             // 4. Unexpected error during constraint processing (not re-thrown).
             const unconstrainedSolution = design.solve(y);
-            return this.createResult(unconstrainedSolution.map(value => Math.round(value * 1e12) / 1e12), x, y);
+            final_coeffs = unconstrainedSolution.map(value => Math.round(value * 1e12) / 1e12);
         }
+        return this.createResult(final_coeffs, x, y, tauValue);
     }
 }
